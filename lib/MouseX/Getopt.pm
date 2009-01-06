@@ -5,7 +5,7 @@ use Mouse::Role;
 use MouseX::Getopt::OptionTypeMap;
 use Getopt::Long ();
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 has 'ARGV'       => ( is => 'ro', isa => 'ArrayRef' );
 has 'extra_argv' => ( is => 'ro', isa => 'ArrayRef' );

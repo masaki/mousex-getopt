@@ -1,4 +1,7 @@
 Revision history for Perl extension MouseX::Getopt
 
+0.02
+        - added extra_argv and ARGV attributes
+
 0.01
         - original version
