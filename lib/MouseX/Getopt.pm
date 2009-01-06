@@ -2,6 +2,7 @@ package MouseX::Getopt;
 
 use 5.8.1;
 use Mouse::Role;
+use MouseX::Getopt::OptionTypeMap;
 use Getopt::Long ();
 
 our $VERSION = '0.01';
@@ -9,38 +10,41 @@ our $VERSION = '0.01';
 sub new_with_options {
     my ($class, %params) = @_;
 
+    my %processed = $class->_parse_argv(
+        specs  => $class->_attrs_to_specs,
+        params => \%params,
+    );
+
     return $class->new(
-        %params, # explicit params to new
-        $class->_parse_argv(%params), #" params from CLI
+        %params,    # explicit params to new
+        %processed, # params from CLI
     );
 }
 
 sub _parse_argv {
     my ($class, %params) = @_;
 
-    my $options  = $class->_attrs_to_options;
-    my %init_arg = map { $_->{name} => $_->{init_arg} } @$options;
-
     local @ARGV = @{ $params{argv} || \@ARGV };
+    my $specs = $params{specs};
 
-    my @err;
-    my $parsed_options = eval {
-        local $SIG{__WARN__} = sub { push @err, @_ };
-        Getopt::Long::GetOptions(\my %options, map { $_->{spec} } @$options);
+    my @warn;
+    my $options = eval {
+        local $SIG{__WARN__} = sub { push @warn, @_ };
+        Getopt::Long::GetOptions(\my %options, map { $_->{spec} } values %$specs);
         \%options;
     };
-    if (@err or $@) {
-        die join '', grep { defined } @err, $@;
+    if (@warn or $@) {
+        die join '', grep { defined } @warn, $@;
     }
 
-    my %args = map { $init_arg{$_} => $parsed_options->{$_} } keys %$parsed_options;
+    my %args = map { $specs->{$_}->{name} => $options->{$_} } keys %$options;
     return %args;
 }
 
-sub _attrs_to_options {
+sub _attrs_to_specs {
     my $class = shift;
 
-    my @options;
+    my $specs = {};
     for my $attr ($class->meta->compute_all_applicable_attributes) {
         my $name = $attr->name;
         next if $name =~ /^_/;
@@ -48,34 +52,16 @@ sub _attrs_to_options {
         my $spec = $name;
         if ($attr->has_type_constraint) {
             my $type = $attr->type_constraint;
-            if ($class->_has_option_type($type)) {
-                $spec .= $class->_get_option_type($type);
+            if (MouseX::Getopt::OptionTypeMap->has_option_type($type)) {
+                $spec .= MouseX::Getopt::OptionTypeMap->get_option_type($type);
             }
         }
 
         $name =~ s/\W/_/g;
-        push @options, {
-            name     => $name,
-            spec     => $spec,
-            init_arg => $attr->init_arg,
-        };
+        $specs->{$name} = { spec => $spec, name => $attr->init_arg };
     }
 
-    \@options;
-}
-
-{
-    my %typemap = (
-        'Bool'     => '!',
-        'Str'      => '=s',
-        'Int'      => '=i',
-        'Num'      => '=f',
-        'ArrayRef' => '=s@',
-        'HashRef'  => '=s%',
-    );
-
-    sub _has_option_type { exists $typemap{$_[1]} }
-    sub _get_option_type { $typemap{$_[1]} }
+    $specs;
 }
 
 no Mouse::Role; 1;
