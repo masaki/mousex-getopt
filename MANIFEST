@@ -65,6 +65,7 @@ META.yml
 README
 t/00_compile.t
 t/01_basic.t
+t/02_argv.t
 t/App.pm
 xt/01_pod.t
 xt/02_podcoverage.t
