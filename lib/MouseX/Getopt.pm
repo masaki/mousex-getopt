@@ -13,16 +13,34 @@ has 'extra_argv' => ( is => 'ro', isa => 'ArrayRef' );
 sub new_with_options {
     my ($class, %params) = @_;
 
-    my %processed = $class->_parse_argv(
+    # with MouseX::ConfigFromFile
+    my $config = {};
+    if ($class->meta->does_role('MouseX::ConfigFromFile')) { # doesn't search hierarchy
+        local @ARGV = @ARGV;
+
+        my $parser = Getopt::Long::Parser->new(config => ['pass_through']);
+        $parser->getoptions('configfile=s', \my $file);
+
+        unless (defined $file) {
+            $file = $class->meta->get_attribute('configfile')->default;
+        }
+
+        if (defined $file) {
+            $config = $class->get_config_from_file($file);
+        }
+    }
+
+    my $processed = $class->_parse_argv(
         specs  => $class->_attrs_to_specs,
         params => \%params,
     );
 
     return $class->new(
-        ARGV       => $processed{ARGV},
-        extra_argv => $processed{extra_argv},
-        %params,                  # explicit params to new
-        %{ $processed{options} }, # params from CLI
+        ARGV       => $processed->{ARGV},
+        extra_argv => $processed->{extra_argv},
+        %params,                    # explicit params to new
+        %$config,                   # params from ConfigFromFile
+        %{ $processed->{options} }, # params from CLI
     );
 }
 
@@ -46,11 +64,11 @@ sub _parse_argv {
     my $extra = [ @ARGV ];
     my %args  = map { $specs->{$_}->{name} => $options->{$_} } keys %$options;
 
-    return (
+    return +{
         options    => \%args,
         ARGV       => $argv,
         extra_argv => $extra,
-    );
+    };
 }
 
 sub _attrs_to_specs {
@@ -78,8 +96,6 @@ sub _attrs_to_specs {
 }
 
 no Mouse::Role; 1;
-
-=for stopwords DWIM params
 
 =head1 NAME
 
@@ -116,6 +132,20 @@ params by introspecting your class's attributes. It will use the name
 of your attribute as the command line option, and if there is a type
 constraint defined, it will configure L<Getopt::Long> to handle the
 option accordingly.
+
+If your class also uses L<MouseX::ConfigFromFile>, this role's
+C<new_with_options> will load the configfile specified by the
+C<--configfile> option or the default you've given for the configfile
+attribute.
+
+Example:
+
+  package MyApp;
+  use Mouse;
+  with 'MouseX::Getopt';
+  with 'MouseX::ConfigFromFile';
+
+  has '+configfile' => ( default => '/path/to/file' );
 
 =head2 Supported Type Constraints
 
@@ -225,6 +255,16 @@ as it originally existed at the time of C<new_with_options>.
 This accessor contains an arrayref of leftover C<@ARGV> elements that
 L<Getopt::Long> did not parse. Note that the real C<@ARGV> is left
 unmangled.
+
+=head1 CAVEATS
+
+=over 4
+
+=item C<traits> and C<metaclass> (C<Getopt>, C<NoGetopt>) are not supported.
+
+=item L<Getopt::Long::Descriptive> is not supported.
+
+=back
 
 =head1 AUTHOR
 
