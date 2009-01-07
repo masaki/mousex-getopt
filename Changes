@@ -1,5 +1,8 @@
 Revision history for Perl extension MouseX::Getopt
 
+0.03
+        - support for config file loading via MouseX::ConfigFromFile
+
 0.02
         - added extra_argv and ARGV attributes
 
