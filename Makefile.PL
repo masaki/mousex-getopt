@@ -2,7 +2,7 @@ use inc::Module::Install;
 name 'MouseX-Getopt';
 all_from 'lib/MouseX/Getopt.pm';
 
-requires 'Mouse' => '0.14';
+requires 'Mouse' => '0.15';
 requires 'Getopt::Long';
 
 tests 't/*.t';
