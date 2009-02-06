@@ -1,5 +1,8 @@
 Revision history for Perl extension MouseX::Getopt
 
+0.04
+        - use Mouse 0.15
+
 0.03
         - support for config file loading via MouseX::ConfigFromFile
 
