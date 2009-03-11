@@ -1,25 +1,22 @@
-use Test::Base;
+use Test::More tests => 4;
 use Test::Deep;
-use t::App;
 
-plan tests => 9;
+do {
+    package MyApp;
+    use Mouse;
+    with 'MouseX::Getopt';
 
-{
-    my @args = qw(--str foobarbaz --int 512 --bool extra args);
-    local @ARGV = @args;
-    my $app = t::App->new_with_options;
+    has 'foo' => (is => 'rw', isa => 'Str');
+    has 'bar' => (is => 'rw', isa => 'Int');
+};
 
-    is $app->str  => 'foobarbaz', 'str';
-    is $app->int  => 512,         'int';
-    is $app->bool => 1,           'bool on';
+my @args = qw(--foo foo --bar 1 extra args);
+local @ARGV = @args;
 
-    cmp_deeply $app->arrayref => [], 'arrayref []';
-    cmp_deeply $app->hashref  => {}, 'hashref {}';
+my $app = MyApp->new_with_options;
 
-    is $app->_private_attr => 1024, '_private_attr is always 1024';
+is $app->foo => 'foo', 'foo accessor ok';
+is $app->bar => 1, 'bar accessor ok';
 
-    # argv
-    cmp_deeply $app->ARGV       => \@args,      'ARGV accessor';
-    cmp_deeply \@ARGV           => \@args,      '@ARGV unmangled';
-    cmp_deeply $app->extra_argv => [qw(extra args)], 'extra_argv accessor';
-}
+cmp_deeply $app->ARGV => \@args, 'ARGV accessor is saved @ARGV ok';
+cmp_deeply $app->extra_argv => [qw(extra args)], 'extra_argv accessor is saved extra @ARGV ok';

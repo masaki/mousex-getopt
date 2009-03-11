@@ -1,14 +1,11 @@
-use Test::Base;
+use Test::More;
 
-eval { require MouseX::ConfigFromFile };
-if ($@) {
-    plan skip_all => 'MouseX::ConfigFromFile required for this test';
-}
-else {
-    plan tests => 8;
-}
+eval "use MouseX::ConfigFromFile";
+plan skip_all => 'MouseX::ConfigFromFile required for this test' if $@;
+plan tests => 8;
 
-{
+
+do {
     package Foo;
     use Mouse;
     with 'MouseX::ConfigFromFile';
@@ -27,29 +24,36 @@ else {
     has '+configfile' => ( default => '/path/to/bar' );
 
     sub get_config_from_file { +{ config => 'configvalue' } }
-}
+};
 
-{ # Foo
+my $obj;
+
+# Foo
+$obj = do {
     local @ARGV = qw(--configfile /path/to/config);
-    my $obj = Foo->new_with_options;
-    is $obj->config     => 'configvalue';
-    is $obj->configfile => '/path/to/config';
-}
-{
+    Foo->new_with_options;
+};
+is $obj->config => 'configvalue', 'set config from get_config_from_file ok';
+is $obj->configfile => '/path/to/config', 'getopt --configfile ok';
+
+$obj = do {
     local @ARGV = ();
-    my $obj = Foo->new_with_options;
-    is $obj->config     => undef;
-    is $obj->configfile => undef;
-}
-{ # Bar
+    Foo->new_with_options;
+};
+is $obj->config => undef, 'do not set config ok';
+is $obj->configfile => undef, 'no --configfile ok';
+
+# Bar
+$obj = do {
     local @ARGV = qw(--configfile /path/to/config);
-    my $obj = Bar->new_with_options;
-    is $obj->config     => 'configvalue';
-    is $obj->configfile => '/path/to/config';
-}
-{
+    Bar->new_with_options;
+};
+is $obj->config => 'configvalue', 'set config from get_config_from_file ok';
+is $obj->configfile => '/path/to/config', 'getopt --configfile ok';
+
+$obj = do {
     local @ARGV = ();
-    my $obj = Bar->new_with_options;
-    is $obj->config     => 'configvalue';
-    is $obj->configfile => '/path/to/bar';
-}
+    Bar->new_with_options;
+};
+is $obj->config => 'configvalue', 'set config from get_config_from_file ok';
+is $obj->configfile => '/path/to/bar', 'set configfile attr default ok';
