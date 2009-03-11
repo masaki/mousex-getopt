@@ -2,6 +2,7 @@ package MouseX::Getopt;
 
 use 5.008_001;
 use Mouse::Role;
+use Mouse::Util;
 use MouseX::Getopt::Meta::Attribute::Getopt;
 use MouseX::Getopt::Meta::Attribute::NoGetopt;
 use MouseX::Getopt::OptionTypeMap;
@@ -17,17 +18,22 @@ sub new_with_options {
 
     # with MouseX::ConfigFromFile
     my $config = {};
-    if ($class->meta->does_role('MouseX::ConfigFromFile')) { # doesn't search hierarchy
+    {
+        last unless grep {
+            $_->can('meta') and $_->meta->does_role('MouseX::ConfigFromFile')
+        } @{ Mouse::Util::get_linear_isa($class) };
+
         local @ARGV = @ARGV;
-        my $parser = Getopt::Long::Parser->new(config => ['pass_through']);
-        $parser->getoptions('configfile=s', \my $file);
+        Getopt::Long::Parser->new(config => ['pass_through'])->getoptions(
+            'configfile=s', \my $file,
+        );
 
         unless (defined $file) {
-            $file = $class->meta->get_attribute('configfile')->default;
+            my $attr = $class->meta->get_attribute('configfile');
+            $file = $attr->default if defined $attr and $attr->has_default;
         }
-        if (defined $file) {
-            $config = $class->get_config_from_file($file);
-        }
+
+        $config = $class->get_config_from_file($file) if defined $file;
     }
 
     my $processed = $class->_parse_argv(\%params, $config);
