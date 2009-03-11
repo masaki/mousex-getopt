@@ -12,6 +12,7 @@ requires 'Class::Method::Modifiers';
 requires 'Scalar::Util' => '1.14';
 requires 'Carp';
 
+recommends 'Any::Moose' => '0.05';
 recommends 'Class::Method::Modifiers::Fast';
 
 tests 't/*.t';
