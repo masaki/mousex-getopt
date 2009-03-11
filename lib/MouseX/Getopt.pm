@@ -8,7 +8,7 @@ use MouseX::Getopt::Meta::Attribute::NoGetopt;
 use MouseX::Getopt::OptionTypeMap;
 use Getopt::Long ();
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 has 'ARGV'       => (is => 'rw', isa => 'ArrayRef', metaclass => 'NoGetopt');
 has 'extra_argv' => (is => 'rw', isa => 'ArrayRef', metaclass => 'NoGetopt');
