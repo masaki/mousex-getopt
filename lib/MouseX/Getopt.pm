@@ -1,14 +1,15 @@
 package MouseX::Getopt;
 
-use 5.8.1;
+use 5.008_001;
 use Mouse::Role;
+use MouseX::Getopt::Meta::Attribute::NoGetopt;
 use MouseX::Getopt::OptionTypeMap;
 use Getopt::Long ();
 
 our $VERSION = '0.04';
 
-has 'ARGV'       => ( is => 'ro', isa => 'ArrayRef' );
-has 'extra_argv' => ( is => 'ro', isa => 'ArrayRef' );
+has 'ARGV'       => (is => 'rw', isa => 'ArrayRef', metaclass => 'NoGetopt');
+has 'extra_argv' => (is => 'rw', isa => 'ArrayRef', metaclass => 'NoGetopt');
 
 sub new_with_options {
     my ($class, %params) = @_;
@@ -75,11 +76,8 @@ sub _attrs_to_specs {
     my $class = shift;
 
     my $specs = {};
-    for my $attr ($class->meta->compute_all_applicable_attributes) {
+    for my $attr ($class->_compute_getopt_attrs) {
         my $name = $attr->name;
-        next if $name =~ /^_/;
-        next if $name =~ /^(?:ARGV|extra_argv)$/;
-
         my $spec = $name;
         if ($attr->has_type_constraint) {
             my $type = $attr->type_constraint;
@@ -93,6 +91,16 @@ sub _attrs_to_specs {
     }
 
     $specs;
+}
+
+sub _compute_getopt_attrs {
+    my $class = shift;
+
+    return grep {
+        not $_->isa('MouseX::Getopt::Meta::Attribute::NoGetopt')
+            and
+        $_->name !~ /^_/
+    } $class->meta->compute_all_applicable_attributes;
 }
 
 no Mouse::Role; 1;
@@ -269,6 +277,10 @@ unmangled.
 =head1 AUTHOR
 
 NAKAGAWA Masaki E<lt>masaki@cpan.orgE<gt>
+
+=head1 THANKS TO
+
+L<MooseX::Getopt/AUTHOR>
 
 =head1 LICENSE
 
