@@ -1,5 +1,12 @@
 Revision history for Perl extension MouseX::Getopt
 
+0.05
+        - use Mouse 0.19 (metaclass support)
+        - added Getopt and NoGetopt metaclass
+        - search superclasses for config file loading
+        - works with 'MouseX::Getopt::Strict'
+        - optimized MouseX::Getopt::OptionTypeMap
+
 0.04
         - use Mouse 0.15
 

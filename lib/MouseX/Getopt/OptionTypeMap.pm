@@ -1,6 +1,9 @@
 package MouseX::Getopt::OptionTypeMap;
 
-use Mouse;
+use strict;
+use warnings;
+use Scalar::Util 1.14 ();
+use Carp ();
 
 my %option_type_map = (
     'Bool'      => '!',
@@ -13,35 +16,35 @@ my %option_type_map = (
 );
 
 sub _to_name {
-    my ($class, $type_or_name) = @_;
-    return (blessed $type_or_name) ? $type_or_name->name : $type_or_name;
+    my ($type_or_name) = @_;
+    return Scalar::Util::blessed($type_or_name) ? $type_or_name->name : $type_or_name;
 }
 
 sub has_option_type {
-    my ($class, $type_or_name) = @_;
-    return exists $option_type_map{ $class->_to_name($type_or_name) };
+    my (undef, $type_or_name) = @_;
+    return exists $option_type_map{_to_name($type_or_name)};
 }
 
 sub get_option_type {
-    my ($class, $type_or_name) = @_;
-
-    if ($class->has_option_type($type_or_name)) {
-        return $option_type_map{ $class->_to_name($type_or_name) };
+    my (undef, $type_or_name) = @_;
+    if (my $option_type = $option_type_map{_to_name($type_or_name)}) {
+        return $option_type;
     }
-
-    return;
+    else {
+        return;
+    }
 }
 
 sub add_option_type_to_map {
-    my ($class, $type_or_name, $spec) = @_;
+    my (undef, $type_or_name, $spec) = @_;
 
-    (defined $type_or_name && defined $spec)
-        || confess 'You must supply both a type name and an option string';
+    (defined $type_or_name and defined $spec)
+        or Carp::confess('You must supply both a type name and an option string');
 
-    $option_type_map{ $class->_to_name($type_or_name) } = $spec;
+    $option_type_map{_to_name($type_or_name)} = $spec;
 }
 
-no Mouse; __PACKAGE__->meta->make_immutable; 1;
+1;
 
 =head1 NAME
 

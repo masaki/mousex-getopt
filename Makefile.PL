@@ -8,6 +8,11 @@ requires 'Mouse::Meta::Attribute';
 requires 'Mouse::Util';
 requires 'Mouse::Util::TypeConstraints';
 requires 'Getopt::Long';
+requires 'Class::Method::Modifiers';
+requires 'Scalar::Util' => '1.14';
+requires 'Carp';
+
+recommends 'Class::Method::Modifiers::Fast';
 
 tests 't/*.t';
 test_requires 'Test::More';
