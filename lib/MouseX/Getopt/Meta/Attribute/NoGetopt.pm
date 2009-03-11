@@ -34,7 +34,7 @@ MouseX::Getopt::Meta::Attribute::NoGetopt - Optional meta attribute for ignoring
 =head1 DESCRIPTION
 
 This module is a custom attribute metaclass for suppressing
-C<MouseX::Getopt>'s process to a sprecific attribute.
+C<MouseX::Getopt>'s process to a specific attribute.
 
 =head1 AUTHOR
 

@@ -49,7 +49,7 @@ sub new_with_options {
 sub _parse_argv {
     my ($class, $params, $config) = @_;
 
-    my ($spec, $init_arg) = $class->_parse_attributes($params, $config); #$params{specs};
+    my ($spec, $init_arg) = $class->_parse_attributes($params, $config);
 
     my @warn;
     local @ARGV = @ARGV;
@@ -94,7 +94,6 @@ sub _parse_attributes {
         $init_arg{$flag} = $attr->init_arg;
     }
 
-    
     return (\@spec, \%init_arg);
 }
 

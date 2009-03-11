@@ -24,4 +24,4 @@ MouseX::Getopt
 ARGV
 Str ClassName Int Num ArrayRef HashRef
 DWIM
-params configfile
+params configfile metaclass
