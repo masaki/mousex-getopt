@@ -29,6 +29,7 @@ has 'cmd_aliases' => (
 );
 
 no Mouse;
+#no Mouse::Util::TypeConstraints;
 
 1;
 
