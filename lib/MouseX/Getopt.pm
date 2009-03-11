@@ -2,6 +2,7 @@ package MouseX::Getopt;
 
 use 5.008_001;
 use Mouse::Role;
+use MouseX::Getopt::Meta::Attribute::Getopt;
 use MouseX::Getopt::Meta::Attribute::NoGetopt;
 use MouseX::Getopt::OptionTypeMap;
 use Getopt::Long ();
@@ -18,67 +19,62 @@ sub new_with_options {
     my $config = {};
     if ($class->meta->does_role('MouseX::ConfigFromFile')) { # doesn't search hierarchy
         local @ARGV = @ARGV;
-
         my $parser = Getopt::Long::Parser->new(config => ['pass_through']);
         $parser->getoptions('configfile=s', \my $file);
 
         unless (defined $file) {
             $file = $class->meta->get_attribute('configfile')->default;
         }
-
         if (defined $file) {
             $config = $class->get_config_from_file($file);
         }
     }
 
-    my $processed = $class->_parse_argv(
-        specs  => $class->_attrs_to_specs,
-        params => \%params,
-    );
+    my $processed = $class->_parse_argv(\%params, $config);
 
     return $class->new(
         ARGV       => $processed->{ARGV},
         extra_argv => $processed->{extra_argv},
         %params,                    # explicit params to new
-        %$config,                   # params from ConfigFromFile
-        %{ $processed->{options} }, # params from CLI
+        %{ $processed->{options} }, # params from ConfigFromFile and CLI
     );
 }
 
 sub _parse_argv {
-    my ($class, %params) = @_;
+    my ($class, $params, $config) = @_;
 
-    local @ARGV = @{ $params{argv} || \@ARGV };
-    my $argv    = [ @ARGV ];
-    my $specs   = $params{specs};
+    my ($spec, $init_arg) = $class->_parse_attributes($params, $config); #$params{specs};
 
     my @warn;
+    local @ARGV = @ARGV;
+    my $argv = [ @ARGV ]; # copy pre-parsed @ARGV
     my $options = eval {
         local $SIG{__WARN__} = sub { push @warn, @_ };
-        Getopt::Long::GetOptions(\my %options, map { $_->{spec} } values %$specs);
+        Getopt::Long::GetOptions(\my %options, @$spec);
         \%options;
     };
     if (@warn or $@) {
         die join '', grep { defined } @warn, $@;
     }
+    my $extra = [ @ARGV ]; # post-parsed @ARGV
 
-    my $extra = [ @ARGV ];
-    my %args  = map { $specs->{$_}->{name} => $options->{$_} } keys %$options;
-
+    my %parsed = map { $init_arg->{$_} => $options->{$_} } keys %$options;
     return +{
-        options    => \%args,
+        options    => keys %$config ? { %$config, %parsed } : \%parsed,
         ARGV       => $argv,
         extra_argv => $extra,
     };
 }
 
-sub _attrs_to_specs {
-    my $class = shift;
+sub _parse_attributes {
+    my ($class, $params, $config) = @_;
 
-    my $specs = {};
-    for my $attr ($class->_compute_getopt_attrs) {
-        my $name = $attr->name;
-        my $spec = $name;
+    my (@spec, %init_arg);
+
+    for my $attr ($class->_compute_getopt_attributes) {
+        my ($flag, @aliases) = $class->_compute_getopt_flags($attr);
+        my $spec = join '|', $flag, @aliases;
+
         if ($attr->has_type_constraint) {
             my $type = $attr->type_constraint;
             if (MouseX::Getopt::OptionTypeMap->has_option_type($type)) {
@@ -86,21 +82,38 @@ sub _attrs_to_specs {
             }
         }
 
-        $name =~ s/\W/_/g;
-        $specs->{$name} = { spec => $spec, name => $attr->init_arg };
+        push @spec, $spec;
+
+        $flag =~ s/\W/_/g;
+        $init_arg{$flag} = $attr->init_arg;
     }
 
-    $specs;
+    
+    return (\@spec, \%init_arg);
 }
 
-sub _compute_getopt_attrs {
+sub _compute_getopt_attributes {
     my $class = shift;
 
     return grep {
+        $_->isa('MouseX::Getopt::Meta::Attribute::Getopt') or $_->name !~ /^_/
+    } grep {
         not $_->isa('MouseX::Getopt::Meta::Attribute::NoGetopt')
-            and
-        $_->name !~ /^_/
     } $class->meta->compute_all_applicable_attributes;
+}
+
+sub _compute_getopt_flags {
+    my ($class, $attr) = @_;
+
+    my $flag = $attr->name;
+    my @aliases;
+
+    if ($attr->isa('MouseX::Getopt::Meta::Attribute::Getopt')) {
+        $flag    = $attr->cmd_flag         if $attr->has_cmd_flag;
+        @aliases = @{ $attr->cmd_aliases } if $attr->has_cmd_aliases;
+    }
+
+    return ($flag, @aliases);
 }
 
 no Mouse::Role; 1;

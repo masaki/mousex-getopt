@@ -1,16 +1,57 @@
 use Test::Base;
 use Test::Deep;
-use t::App;
 
 plan tests => 6*blocks;
 
 filters { map { $_ => ['eval'] } qw(argv arrayref hashref) };
 
+do {
+    package MyApp;
+    use Mouse;
+
+    with 'MouseX::Getopt';
+
+    has 'str' => (
+        is      => 'ro',
+        isa     => 'Str',
+        default => 'foo',
+    );
+
+    has 'int' => (
+        is      => 'ro',
+        isa     => 'Int',
+        default => 128,
+    );
+
+    has 'bool' => (
+        is  => 'ro',
+        isa => 'Bool',
+    );
+
+    has 'arrayref' => (
+        is      => 'ro',
+        isa     => 'ArrayRef',
+        default => sub { [] },
+    );
+
+    has 'hashref' => (
+        is      => 'ro',
+        isa     => 'HashRef',
+        default => sub { +{} },
+    );
+
+    has '_private_attr' => (
+        is      => 'ro',
+        isa     => 'Int',
+        default => 1024,
+    );
+};
+
 run {
     my $block = shift;
 
     local @ARGV = @{ $block->argv };
-    my $app = t::App->new_with_options;
+    my $app = MyApp->new_with_options;
     my $name = $block->name;
 
     is $app->str  => $block->str,  "str ($name)";
