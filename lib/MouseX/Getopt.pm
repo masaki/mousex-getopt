@@ -24,9 +24,8 @@ sub new_with_options {
         } @{ Mouse::Util::get_linear_isa($class) };
 
         local @ARGV = @ARGV;
-        Getopt::Long::Parser->new(config => ['pass_through'])->getoptions(
-            'configfile=s', \my $file,
-        );
+        my $parser = Getopt::Long::Parser->new(config => ['pass_through']);
+        $parser->getoptions('configfile=s', \my $file);
 
         unless (defined $file) {
             my $attr = $class->meta->get_attribute('configfile');
@@ -286,9 +285,9 @@ unmangled.
 
 =over 4
 
-=item C<traits> and C<metaclass> (C<Getopt>, C<NoGetopt>) are not supported.
+=item not supported C<traits> (Mouse 0.19).
 
-=item L<Getopt::Long::Descriptive> is not supported.
+=item not supported L<Getopt::Long::Descriptive>.
 
 =back
 
