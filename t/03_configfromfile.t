@@ -1,8 +1,10 @@
 use Test::More;
+use Path::Class;
 
-eval "use MouseX::ConfigFromFile";
-plan skip_all => 'MouseX::ConfigFromFile required for this test' if $@;
-plan tests => 8;
+eval { require MouseX::ConfigFromFile };
+plan $@
+    ? (skip_all => 'MouseX::ConfigFromFile required for this test')
+    : (tests    => 8);
 
 
 do {
@@ -34,7 +36,7 @@ $obj = do {
     Foo->new_with_options;
 };
 is $obj->config => 'configvalue', 'set config from get_config_from_file ok';
-is $obj->configfile => '/path/to/config', 'getopt --configfile ok';
+is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
 
 $obj = do {
     local @ARGV = ();
@@ -49,11 +51,11 @@ $obj = do {
     Bar->new_with_options;
 };
 is $obj->config => 'configvalue', 'set config from get_config_from_file ok';
-is $obj->configfile => '/path/to/config', 'getopt --configfile ok';
+is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
 
 $obj = do {
     local @ARGV = ();
     Bar->new_with_options;
 };
 is $obj->config => 'configvalue', 'set config from get_config_from_file ok';
-is $obj->configfile => '/path/to/bar', 'set configfile attr default ok';
+is $obj->configfile => file('/path/to/bar'), 'set configfile attr default ok';

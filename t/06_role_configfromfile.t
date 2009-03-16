@@ -1,8 +1,10 @@
 use Test::More;
+use Path::Class;
 
-eval "use MouseX::ConfigFromFile";
-plan skip_all => 'MouseX::ConfigFromFile required for this test' if $@;
-plan tests => 12;
+eval { require MouseX::ConfigFromFile };
+plan $@
+    ? (skip_all => 'MouseX::ConfigFromFile required for this test')
+    : (tests    => 12);
 
 
 do {
@@ -46,7 +48,7 @@ $obj = do {
     ConfigAndGetopt->new_with_options;
 };
 is $obj->config => 'bar', 'set config from get_config_from_file ok';
-is $obj->configfile => '/path/to/config', 'getopt --configfile ok';
+is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
 
 $obj = do {
     local @ARGV = ();
@@ -61,14 +63,14 @@ $obj = do {
     DefaultConfig->new_with_options;
 };
 is $obj->config => 'bar', 'set config from get_config_from_file ok';
-is $obj->configfile => '/path/to/config', 'getopt --configfile ok';
+is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
 
 $obj = do {
     local @ARGV = ();
     DefaultConfig->new_with_options;
 };
 is $obj->config => 'foo', 'set config from get_config_from_file ok';
-is $obj->configfile => '/default', 'set configfile attr default ok';
+is $obj->configfile => file('/default'), 'set configfile attr default ok';
 
 # GetoptOnly extends ConfigOnly
 $obj = do {
@@ -76,7 +78,7 @@ $obj = do {
     GetoptOnly->new_with_options;
 };
 is $obj->config => '/path/to/config', 'set config from get_config_from_file ok';
-is $obj->configfile => '/path/to/config', 'getopt --configfile ok';
+is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
 
 $obj = do {
     local @ARGV = ();

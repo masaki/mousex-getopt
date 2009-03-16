@@ -12,7 +12,6 @@ requires 'Class::Method::Modifiers';
 requires 'Scalar::Util' => '1.14';
 requires 'Carp';
 
-recommends 'Any::Moose' => '0.05';
 recommends 'Class::Method::Modifiers::Fast';
 
 tests 't/*.t';
@@ -20,6 +19,8 @@ test_requires 'Test::More';
 test_requires 'Test::UseAllModules';
 test_requires 'Test::Deep';
 test_requires 'Test::Exception';
+test_requires 'Path::Class';
+test_requires 'Any::Moose' => '0.05';
 author_tests 'xt';
 use_test_base;
 
