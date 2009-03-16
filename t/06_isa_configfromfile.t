@@ -4,85 +4,67 @@ use Path::Class;
 eval { require MouseX::ConfigFromFile };
 plan $@
     ? (skip_all => 'MouseX::ConfigFromFile required for this test')
-    : (tests    => 12);
-
+    : (tests    => 16);
 
 do {
-    package ConfigAndGetopt;
+    package MyRole::Config;
+    use Mouse::Role;
+    with 'MouseX::ConfigFromFile';
+    sub get_config_from_file { +{ host => 'localhost', port => 3000 } }
+
+    package MyClass::WithConfig;
+    use Mouse;
+    # TODO: combine_apply
+    with 'MouseX::Getopt';
+    with 'MyRole::Config';
+    has 'host' => (is => 'rw', isa => 'Str');
+    has 'port' => (is => 'rw', isa => 'Int');
+
+    package MyRole::Getopt;
+    use Mouse::Role;
+    # TODO: combine_apply
+    with 'MouseX::Getopt';
+    with 'MyRole::Config';
+
+    package MyClass::With;
+    use Mouse;
+    with 'MyRole::Getopt';
+    has 'host' => (is => 'rw', isa => 'Str');
+    has 'port' => (is => 'rw', isa => 'Int');
+};
+
+do {
+    package MyClass::Config;
     use Mouse;
     with 'MouseX::ConfigFromFile';
+    sub get_config_from_file { +{ host => 'localhost', port => 3000 } }
+
+    package MyClass::ExtendConfig;
+    use Mouse;
     with 'MouseX::Getopt';
+    extends 'MyClass::Config';
+    has 'host' => (is => 'rw', isa => 'Str');
+    has 'port' => (is => 'rw', isa => 'Int');
 
-    has 'config' => ( is => 'ro', isa => 'Str' );
-
-    sub get_config_from_file {
-        my ($class, $file) = @_;
-        return +{ config => ($file eq '/default') ? 'foo' : 'bar' };
-    }
-
-    package DefaultConfig;
+    package MyClass::Getopt;
     use Mouse;
-    extends 'ConfigAndGetopt';
-
-    has '+configfile' => ( default => '/default' );
-
-    package ConfigOnly;
-    use Mouse;
-    with 'MouseX::ConfigFromFile';
-
-    has 'config' => ( is => 'rw', isa => 'Str' );
-
-    sub get_config_from_file { +{ config => $_[1] } }
-
-    package GetoptOnly;
-    use Mouse;
-    extends 'ConfigOnly';
     with 'MouseX::Getopt';
+    extends 'MyClass::Config';
+
+    package MyClass::Extend;
+    use Mouse;
+    extends 'MyClass::Getopt';
+    has 'host' => (is => 'rw', isa => 'Str');
+    has 'port' => (is => 'rw', isa => 'Int');
 };
 
-my $obj;
+for my $suffix (qw/WithConfig With ExtendConfig Extend/) {
+    my $class = "MyClass::${suffix}";
+    local @ARGV = qw(--configfile /path/to/myapp.conf);
+    my $app = $class->new_with_options;
 
-# ConfigAndGetopt
-$obj = do {
-    local @ARGV = qw(--configfile /path/to/config);
-    ConfigAndGetopt->new_with_options;
-};
-is $obj->config => 'bar', 'set config from get_config_from_file ok';
-is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
-
-$obj = do {
-    local @ARGV = ();
-    ConfigAndGetopt->new_with_options;
-};
-is $obj->config => undef, 'unset config ok';
-is $obj->configfile => undef, 'no --configfile ok';
-
-# DefaultConfig (extends ConfigAndGetopt)
-$obj = do {
-    local @ARGV = qw(--configfile /path/to/config);
-    DefaultConfig->new_with_options;
-};
-is $obj->config => 'bar', 'set config from get_config_from_file ok';
-is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
-
-$obj = do {
-    local @ARGV = ();
-    DefaultConfig->new_with_options;
-};
-is $obj->config => 'foo', 'set config from get_config_from_file ok';
-is $obj->configfile => file('/default'), 'set configfile attr default ok';
-
-# GetoptOnly extends ConfigOnly
-$obj = do {
-    local @ARGV = qw(--configfile /path/to/config);
-    GetoptOnly->new_with_options;
-};
-is $obj->config => '/path/to/config', 'set config from get_config_from_file ok';
-is $obj->configfile => file('/path/to/config'), 'getopt --configfile ok';
-
-$obj = do {
-    local @ARGV = ();
-    GetoptOnly->new_with_options;
-};
-is $obj->config => undef, 'unset config ok';
-is $obj->configfile => undef, 'no --configfile ok';
+    isa_ok $app->configfile => 'Path::Class::File';
+    is $app->configfile => file('/path/to/myapp.conf'), 'getopt --configfile ok';
+    is $app->host => 'localhost', 'get_config_from_file ok';
+    is $app->port => 3000, 'get_config_from_file ok';
+}
