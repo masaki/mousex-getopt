@@ -5,7 +5,6 @@ all_from 'lib/MouseX/Getopt.pm';
 requires 'Mouse' => '0.19';
 requires 'Mouse::Role';
 requires 'Mouse::Meta::Attribute';
-requires 'Mouse::Util';
 requires 'Mouse::Util::TypeConstraints';
 requires 'Getopt::Long';
 requires 'Class::Method::Modifiers';

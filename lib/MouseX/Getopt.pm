@@ -2,7 +2,6 @@ package MouseX::Getopt;
 
 use 5.008_001;
 use Mouse::Role;
-use Mouse::Util;
 use MouseX::Getopt::Meta::Attribute::Getopt;
 use MouseX::Getopt::Meta::Attribute::NoGetopt;
 use MouseX::Getopt::OptionTypeMap;
@@ -21,7 +20,7 @@ sub new_with_options {
     {
         last unless grep {
             $_->can('meta') and $_->meta->does_role('MouseX::ConfigFromFile')
-        } @{ Mouse::Util::get_linear_isa($class) };
+        } $class->meta->linearized_isa;
 
         local @ARGV = @ARGV;
         my $parser = Getopt::Long::Parser->new(config => ['pass_through']);

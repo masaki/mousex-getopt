@@ -2,8 +2,8 @@ package MouseX::Getopt::OptionTypeMap;
 
 use strict;
 use warnings;
-use Scalar::Util 1.14 ();
-use Carp ();
+use Scalar::Util 1.14 'blessed';
+use Carp 'confess';
 
 my %option_type_map = (
     'Bool'      => '!',
@@ -17,7 +17,7 @@ my %option_type_map = (
 
 sub _to_name {
     my ($type_or_name) = @_;
-    return Scalar::Util::blessed($type_or_name) ? $type_or_name->name : $type_or_name;
+    return blessed $type_or_name ? $type_or_name->name : $type_or_name;
 }
 
 sub has_option_type {
@@ -39,7 +39,7 @@ sub add_option_type_to_map {
     my (undef, $type_or_name, $spec) = @_;
 
     (defined $type_or_name and defined $spec)
-        or Carp::confess('You must supply both a type name and an option string');
+        or confess 'You must supply both a type name and an option string';
 
     $option_type_map{_to_name($type_or_name)} = $spec;
 }
