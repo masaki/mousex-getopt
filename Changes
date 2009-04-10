@@ -1,5 +1,8 @@
 Revision history for Perl extension MouseX::Getopt
 
+0.06
+        - use Mouse 0.20 (get_all_attributes)
+
 0.05
         - use Mouse 0.19 (metaclass support)
         - added Getopt and NoGetopt metaclass
