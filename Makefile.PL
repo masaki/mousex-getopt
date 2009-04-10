@@ -2,7 +2,7 @@ use inc::Module::Install;
 name 'MouseX-Getopt';
 all_from 'lib/MouseX/Getopt.pm';
 
-requires 'Mouse' => '0.19';
+requires 'Mouse' => '0.20';
 requires 'Mouse::Role';
 requires 'Mouse::Meta::Attribute';
 requires 'Mouse::Util::TypeConstraints';
@@ -19,7 +19,7 @@ test_requires 'Test::UseAllModules';
 test_requires 'Test::Deep';
 test_requires 'Test::Exception';
 test_requires 'Path::Class';
-test_requires 'Any::Moose' => '0.05';
+test_requires 'Any::Moose' => '0.07';
 author_tests 'xt';
 use_test_base;
 

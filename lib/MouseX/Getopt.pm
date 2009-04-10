@@ -102,7 +102,7 @@ sub _compute_getopt_attributes {
         $_->isa('MouseX::Getopt::Meta::Attribute::Getopt') or $_->name !~ /^_/
     } grep {
         not $_->isa('MouseX::Getopt::Meta::Attribute::NoGetopt')
-    } $class->meta->compute_all_applicable_attributes;
+    } $class->meta->get_all_attributes;
 }
 
 sub _compute_getopt_flags {
