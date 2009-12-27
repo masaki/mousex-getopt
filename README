@@ -1,3 +1,4 @@
+<<<<<<< HEAD:README
 This is Perl module MouseX::Getopt.
 
 INSTALLATION
@@ -25,3 +26,35 @@ MouseX::Getopt documentation is available as in POD. So you can do:
 to read the documentation online with your favorite pager.
 
 NAKAGAWA Masaki
+=======
+MouseX::Getopt version 0.26
+===========================
+
+See the individual module documentation for more information
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+    Mouse
+    Getopt::Long
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2007-2009 Infinity Interactive, Inc.
+
+http://www.iinteractive.com
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
+>>>>>>> gfx/master:README

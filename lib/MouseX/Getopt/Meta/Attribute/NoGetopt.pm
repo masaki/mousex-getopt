@@ -1,18 +1,21 @@
 package MouseX::Getopt::Meta::Attribute::NoGetopt;
-
-{
-    package # hide from PAUSE
-        Mouse::Meta::Attribute::Custom::NoGetopt;
-    sub register_implementation { 'MouseX::Getopt::Meta::Attribute::NoGetopt' }
-}
-
 use Mouse;
 
-extends 'Mouse::Meta::Attribute';
+extends 'Mouse::Meta::Attribute'; # << Mouse extending Mouse :)
+   with 'MouseX::Getopt::Meta::Attribute::Trait::NoGetopt';
 
 no Mouse;
 
+# register this as a metaclass alias ...
+package # stop confusing PAUSE
+    Mouse::Meta::Attribute::Custom::NoGetopt;
+sub register_implementation { 'MouseX::Getopt::Meta::Attribute::NoGetopt' }
+
 1;
+
+__END__
+
+=pod
 
 =head1 NAME
 
@@ -20,29 +23,37 @@ MouseX::Getopt::Meta::Attribute::NoGetopt - Optional meta attribute for ignoring
 
 =head1 SYNOPSIS
 
-    package MyApp;
-    use Mouse;
+  package App;
+  use Mouse;
 
-    with 'MouseX::Getopt';
+  with 'MouseX::Getopt';
 
-    has 'data' => (
-        metaclass => 'NoGetopt',
-        is        => 'rw',
-        isa       => 'Str',
-    );
+  has 'data' => (
+      metaclass => 'NoGetopt',  # do not attempt to capture this param
+      is        => 'ro',
+      isa       => 'Str',
+      default   => 'file.dat',
+  );
 
 =head1 DESCRIPTION
 
-This module is a custom attribute metaclass for suppressing
-C<MouseX::Getopt>'s process to a specific attribute.
+This is a custom attribute metaclass which can be used to specify
+that a specific attribute should B<not> be processed by
+C<MouseX::Getopt>. All you need to do is specify the C<NoGetopt>
+metaclass.
 
-=head1 AUTHOR
+  has 'foo' => (metaclass => 'NoGetopt', ... );
 
-NAKAGAWA Masaki E<lt>masaki@cpan.orgE<gt>
+=head1 METHODS
 
-=head1 LICENSE
+=over 4
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+=item B<meta>
+
+=back
+
+=head1 SEE ALSO
+
+L<MouseX::Getopt>
 
 =cut

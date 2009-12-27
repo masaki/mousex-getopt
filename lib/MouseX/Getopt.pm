@@ -1,125 +1,17 @@
 package MouseX::Getopt;
-
-use 5.008_001;
 use Mouse::Role;
-use MouseX::Getopt::Meta::Attribute::Getopt;
-use MouseX::Getopt::Meta::Attribute::NoGetopt;
-use MouseX::Getopt::OptionTypeMap;
-use Getopt::Long ();
 
-our $VERSION = '0.06';
+use constant _HAVE_GLD => not not eval { require Getopt::Long::Descriptive };
 
-has 'ARGV'       => (is => 'rw', isa => 'ArrayRef', metaclass => 'NoGetopt');
-has 'extra_argv' => (is => 'rw', isa => 'ArrayRef', metaclass => 'NoGetopt');
+our $VERSION   = '0.2601';
 
-sub new_with_options {
-    my ($class, %params) = @_;
-
-    # with MouseX::ConfigFromFile
-    my $config = {};
-    {
-        last unless grep {
-            $_->can('meta') and $_->meta->does_role('MouseX::ConfigFromFile')
-        } $class->meta->linearized_isa;
-
-        local @ARGV = @ARGV;
-        my $parser = Getopt::Long::Parser->new(config => ['pass_through']);
-        $parser->getoptions('configfile=s', \my $file);
-
-        unless (defined $file) {
-            my $attr = $class->meta->get_attribute('configfile');
-            $file = $attr->default if defined $attr and $attr->has_default;
-        }
-
-        $config = $class->get_config_from_file($file) if defined $file;
-    }
-
-    my $processed = $class->_parse_argv(\%params, $config);
-
-    return $class->new(
-        ARGV       => $processed->{ARGV},
-        extra_argv => $processed->{extra_argv},
-        %params,                    # explicit params to new
-        %{ $processed->{options} }, # params from ConfigFromFile and CLI
-    );
-}
-
-sub _parse_argv {
-    my ($class, $params, $config) = @_;
-
-    my ($spec, $init_arg) = $class->_parse_attributes($params, $config);
-
-    my @warn;
-    local @ARGV = @ARGV;
-    my $argv = [ @ARGV ]; # copy pre-parsed @ARGV
-    my $options = eval {
-        local $SIG{__WARN__} = sub { push @warn, @_ };
-        Getopt::Long::GetOptions(\my %options, @$spec);
-        \%options;
-    };
-    if (@warn or $@) {
-        die join '', grep { defined } @warn, $@;
-    }
-    my $extra = [ @ARGV ]; # post-parsed @ARGV
-
-    my %parsed = map { $init_arg->{$_} => $options->{$_} } keys %$options;
-    return +{
-        options    => keys %$config ? { %$config, %parsed } : \%parsed,
-        ARGV       => $argv,
-        extra_argv => $extra,
-    };
-}
-
-sub _parse_attributes {
-    my ($class, $params, $config) = @_;
-
-    my (@spec, %init_arg);
-
-    for my $attr ($class->_compute_getopt_attributes) {
-        my ($flag, @aliases) = $class->_compute_getopt_flags($attr);
-        my $spec = join '|', $flag, @aliases;
-
-        if ($attr->has_type_constraint) {
-            my $type = $attr->type_constraint;
-            if (MouseX::Getopt::OptionTypeMap->has_option_type($type)) {
-                $spec .= MouseX::Getopt::OptionTypeMap->get_option_type($type);
-            }
-        }
-
-        push @spec, $spec;
-
-        $flag =~ s/\W/_/g;
-        $init_arg{$flag} = $attr->init_arg;
-    }
-
-    return (\@spec, \%init_arg);
-}
-
-sub _compute_getopt_attributes {
-    my $class = shift;
-
-    return grep {
-        $_->isa('MouseX::Getopt::Meta::Attribute::Getopt') or $_->name !~ /^_/
-    } grep {
-        not $_->isa('MouseX::Getopt::Meta::Attribute::NoGetopt')
-    } $class->meta->get_all_attributes;
-}
-
-sub _compute_getopt_flags {
-    my ($class, $attr) = @_;
-
-    my $flag = $attr->name;
-    my @aliases;
-
-    if ($attr->isa('MouseX::Getopt::Meta::Attribute::Getopt')) {
-        $flag    = $attr->cmd_flag         if $attr->has_cmd_flag;
-        @aliases = @{ $attr->cmd_aliases } if $attr->has_cmd_aliases;
-    }
-
-    return ($flag, @aliases);
-}
+with _HAVE_GLD ? 'MouseX::Getopt::GLD' : 'MouseX::Getopt::Basic';
 
 no Mouse::Role; 1;
+
+__END__
+
+=pod
 
 =head1 NAME
 
@@ -127,8 +19,8 @@ MouseX::Getopt - A Mouse role for processing command line options
 
 =head1 SYNOPSIS
 
-  # In your class
-  package MyApp;
+  ## In your class
+  package My::App;
   use Mouse;
 
   with 'MouseX::Getopt';
@@ -136,15 +28,18 @@ MouseX::Getopt - A Mouse role for processing command line options
   has 'out' => (is => 'rw', isa => 'Str', required => 1);
   has 'in'  => (is => 'rw', isa => 'Str', required => 1);
 
-  # In your script
+  # ... rest of the class here
+
+  ## in your script
   #!/usr/bin/perl
 
-  use MyApp;
+  use My::App;
 
-  my $app = MyApp->new_with_options;
+  my $app = My::App->new_with_options();
+  # ... rest of the script here
 
-  # On the command line
-  % perl myapp_script.pl -in file.input -out file.dump
+  ## on the command line
+  % perl my_app_script.pl -in file.input -out file.dump
 
 =head1 DESCRIPTION
 
@@ -154,22 +49,40 @@ objects using parameters passed in from the command line.
 This module attempts to DWIM as much as possible with the command line
 params by introspecting your class's attributes. It will use the name
 of your attribute as the command line option, and if there is a type
-constraint defined, it will configure L<Getopt::Long> to handle the
-option accordingly.
+constraint defined, it will configure Getopt::Long to handle the option
+accordingly.
 
-If your class also uses L<MouseX::ConfigFromFile>, this role's
-C<new_with_options> will load the configfile specified by the
-C<--configfile> option or the default you've given for the configfile
-attribute.
+You can use the trait L<MouseX::Getopt::Meta::Attribute::Trait> or the
+attribute metaclass L<MouseX::Getopt::Meta::Attribute> to get non-default
+commandline option names and aliases.
 
-Example:
+You can use the trait L<MouseX::Getopt::Meta::Attribute::Trait::NoGetopt>
+or the attribute metaclass L<MouseX::Getopt::Meta::Attribute::NoGetopt>
+to have C<MouseX::Getopt> ignore your attribute in the commandline options.
 
-  package MyApp;
-  use Mouse;
-  with 'MouseX::Getopt';
-  with 'MouseX::ConfigFromFile';
+By default, attributes which start with an underscore are not given
+commandline argument support, unless the attribute's metaclass is set
+to L<MouseX::Getopt::Meta::Attribute>. If you don't want your accessors
+to have the leading underscore in their name, you can do this:
 
-  has '+configfile' => ( default => '/path/to/file' );
+  # for read/write attributes
+  has '_foo' => (accessor => 'foo', ...);
+
+  # or for read-only attributes
+  has '_bar' => (reader => 'bar', ...);
+
+This will mean that Getopt will not handle a --foo param, but your
+code can still call the C<foo> method.
+
+If your class also uses a configfile-loading role based on
+L<MouseX::ConfigFromFile>, such as L<MouseX::SimpleConfig>,
+L<MouseX::Getopt>'s C<new_with_options> will load the configfile
+specified by the C<--configfile> option (or the default you've
+given for the configfile attribute) for you.
+
+Options specified in multiple places follow the following
+precendence order: commandline overrides configfile, which
+overrides explicit new_with_options parameters.
 
 =head2 Supported Type Constraints
 
@@ -185,8 +98,8 @@ Getopt::Long. So that this attribute description:
 would translate into C<verbose!> as a Getopt::Long option descriptor,
 which would enable the following command line options:
 
-  % perl myapp_script.pl --verbose
-  % perl myapp_script.pl --noverbose
+  % my_script.pl --verbose
+  % my_script.pl --noverbose
 
 =item I<Int>, I<Float>, I<Str>
 
@@ -201,13 +114,13 @@ in Getopt::Long. So that this attribute description:
   has 'include' => (
       is      => 'rw',
       isa     => 'ArrayRef',
-      default => sub { [] },
+      default => sub { [] }
   );
 
-would translate into C<include=s@> as a Getopt::Long option descriptor,
+would translate into C<includes=s@> as a Getopt::Long option descriptor,
 which would enable the following command line options:
 
-  % perl myapp_script.pl --include /usr/lib --include /usr/local/lib
+  % my_script.pl --include /usr/lib --include /usr/local/lib
 
 =item I<HashRef>
 
@@ -217,25 +130,26 @@ in Getopt::Long. So that this attribute description:
   has 'define' => (
       is      => 'rw',
       isa     => 'HashRef',
-      default => sub { +{} },
+      default => sub { {} }
   );
 
 would translate into C<define=s%> as a Getopt::Long option descriptor,
 which would enable the following command line options:
 
-  % perl myapp_script.pl --define os=linux --define vendor=debian
+  % my_script.pl --define os=linux --define vendor=debian
 
 =back
 
 =head2 Custom Type Constraints
 
 It is possible to create custom type constraint to option spec
-mappings if you need them. The process is fairly simple (but a little
-verbose maybe). First you create a custom subtype, like so:
+mappings if you need them. The process is fairly simple (but a
+little verbose maybe). First you create a custom subtype, like
+so:
 
   subtype 'ArrayOfInts'
       => as 'ArrayRef'
-      => where { scalar (grep { looks_like_number($_) } @$_) };
+      => where { scalar (grep { looks_like_number($_) } @$_)  };
 
 Then you register the mapping, like so:
 
@@ -249,62 +163,109 @@ get the custom option spec. So that, this:
   has 'nums' => (
       is      => 'ro',
       isa     => 'ArrayOfInts',
-      default => sub { [0] },
+      default => sub { [0] }
   );
 
 Will translate to the following on the command line:
 
-  % perl myapp_script.pl --nums 5 --nums 88 --nums 199
+  % my_script.pl --nums 5 --nums 88 --nums 199
+
+This example is fairly trivial, but more complex validations are
+easily possible with a little creativity. The trick is balancing
+the type constraint validations with the Getopt::Long validations.
+
+Better examples are certainly welcome :)
+
+=head2 Inferred Type Constraints
+
+If you define a custom subtype which is a subtype of one of the
+standard L</Supported Type Constraints> above, and do not explicitly
+provide custom support as in L</Custom Type Constraints> above,
+MouseX::Getopt will treat it like the parent type for Getopt
+purposes.
+
+For example, if you had the same custom C<ArrayOfInts> subtype
+from the examples above, but did not add a new custom option
+type for it to the C<OptionTypeMap>, it would be treated just
+like a normal C<ArrayRef> type for Getopt purposes (that is,
+C<=s@>).
 
 =head1 METHODS
 
-=head2 new_with_options(%params?)
+=over 4
+
+=item B<new_with_options (%params)>
 
 This method will take a set of default C<%params> and then collect
 params from the command line (possibly overriding those in C<%params>)
 and then return a newly constructed object.
 
+The special parameter C<argv>, if specified should point to an array
+reference with an array to use instead of C<@ARGV>.
+
 If L<Getopt::Long/GetOptions> fails (due to invalid arguments),
 C<new_with_options> will throw an exception.
 
-=head1 PROPERTIES
+If L<Getopt::Long::Descriptive> is installed and any of the following
+command line params are passed, the program will exit with usage
+information. You can add descriptions for each option by including a
+B<documentation> option for each attribute to document.
 
-=head2 ARGV
+  --?
+  --help
+  --usage
+
+If you have L<Getopt::Long::Descriptive> the C<usage> param is also passed to
+C<new>.
+
+=item B<ARGV>
 
 This accessor contains a reference to a copy of the C<@ARGV> array
 as it originally existed at the time of C<new_with_options>.
 
-=head2 extra_argv
+=item B<extra_argv>
 
 This accessor contains an arrayref of leftover C<@ARGV> elements that
-L<Getopt::Long> did not parse. Note that the real C<@ARGV> is left
-unmangled.
+L<Getopt::Long> did not parse.  Note that the real C<@ARGV> is left
+un-mangled.
 
-=head1 CAVEATS
+=item B<meta>
 
-=over 4
-
-=item not supported C<traits> (Mouse 0.19).
-
-=item not supported L<Getopt::Long::Descriptive>.
+This returns the role meta object.
 
 =back
+
+=head1 BUGS
+
+All complex software has bugs lurking in it, and this module is no
+exception. If you find a bug please either email me, or add the bug
+to cpan-RT.
 
 =head1 AUTHOR
 
 NAKAGAWA Masaki E<lt>masaki@cpan.orgE<gt>
 
-=head1 THANKS TO
+FUJI Goro E<lt>gfuji@cpan.orgE<gt>
 
-L<MooseX::Getopt/AUTHOR>
+=head1 OROGINAL AUTHORS
+
+This is based on C<MooseX::Getopt>.
+
+See L<MooseX::Getopt/AUTHOR> and L<MooseX::Getopt/CONTRIBUTORS>.
+
+=head1 SEE ALSO
+
+L<Mouse>
+
+L<Moose>
+
+L<MooseX::Getopt>
+
+L<Any::Moose::Convert>
 
 =head1 LICENSE
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
-
-=head1 SEE ALSO
-
-L<Mouse>, L<Getopt::Long>, L<MooseX::Getopt>
 
 =cut

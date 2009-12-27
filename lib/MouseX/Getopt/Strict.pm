@@ -1,50 +1,42 @@
 package MouseX::Getopt::Strict;
-
 use Mouse::Role;
 
 with 'MouseX::Getopt';
 
-around '_compute_getopt_attributes' => sub {
-    my ($next, $class, @args) = @_;
-    my @attrs = $next->($class, @args);
-    return grep { $_->isa('MouseX::Getopt::Meta::Attribute::Getopt') } @attrs;
+around '_compute_getopt_attrs' => sub {
+    my $next = shift;
+    my ( $class, @args ) = @_;
+    grep {
+        $_->isa("MouseX::Getopt::Meta::Attribute")
+    } $class->$next(@args);
 };
-
-no Mouse::Role;
 
 1;
 
+__END__
+
+=pod
+
 =head1 NAME
 
-MouseX::Getopt::Strict - Only process options with Getopt metaclass
-
-=head1 SYNOPSIS
-
-    package MyApp;
-    use Mouse;
-
-    with 'MouseX::Getopt::Strict';
-
-    has 'data' => (
-        metaclass => 'Getopt',
-        is        => 'rw',
-        isa       => 'Str',
-    );
+MouseX::Getopt::Strict - only make options for attrs with the Getopt metaclass
 
 =head1 DESCRIPTION
 
-This module is a stricter version of L<MouseX::Getopt>.
-This module only processes the attributes
-which set C<Getopt> metaclass explicitly.
-All other attributes are ignored.
+This is an stricter version of C<MouseX::Getopt> which only processes the
+attributes if they explicitly set as C<Getopt> attributes. All other attributes
+are ignored by the command line handler.
 
-=head1 AUTHOR
+=head1 METHODS
 
-NAKAGAWA Masaki E<lt>masaki@cpan.orgE<gt>
+=over 4
 
-=head1 LICENSE
+=item meta
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+=back
+
+=head1 SEE ALSO
+
+L<MouseX::Getopt>
 
 =cut

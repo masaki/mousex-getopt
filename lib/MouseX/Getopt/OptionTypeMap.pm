@@ -1,70 +1,104 @@
 package MouseX::Getopt::OptionTypeMap;
 
-use strict;
-use warnings;
-use Scalar::Util 1.14 'blessed';
-use Carp 'confess';
+use Mouse 'confess', 'blessed';
+use Mouse::Util::TypeConstraints 'find_type_constraint';
 
 my %option_type_map = (
-    'Bool'      => '!',
-    'Str'       => '=s',
-    'Int'       => '=i',
-    'Num'       => '=f',
-    'ArrayRef'  => '=s@',
-    'HashRef'   => '=s%',
-    'ClassName' => '=s',
+    'Bool'     => '!',
+    'Str'      => '=s',
+    'Int'      => '=i',
+    'Num'      => '=f',
+    'ArrayRef' => '=s@',
+    'HashRef'  => '=s%',
 );
-
-sub _to_name {
-    my ($type_or_name) = @_;
-    return blessed $type_or_name ? $type_or_name->name : $type_or_name;
-}
 
 sub has_option_type {
     my (undef, $type_or_name) = @_;
-    return exists $option_type_map{_to_name($type_or_name)};
+
+    return 1 if exists $option_type_map{blessed($type_or_name) ? $type_or_name->name : $type_or_name};
+
+    my $current = blessed($type_or_name) ? $type_or_name : find_type_constraint($type_or_name);
+
+    (defined $current)
+        || confess "Could not find the type constraint for '$type_or_name'";
+
+    while (my $parent = $current->parent) {
+        return 1 if exists $option_type_map{$parent->name};
+        $current = $parent;
+    }
+
+    return 0;
 }
 
 sub get_option_type {
     my (undef, $type_or_name) = @_;
-    if (my $option_type = $option_type_map{_to_name($type_or_name)}) {
-        return $option_type;
+
+    my $name = blessed($type_or_name) ? $type_or_name->name : $type_or_name;
+
+    return $option_type_map{$name} if exists $option_type_map{$name};
+
+    my $current = ref $type_or_name ? $type_or_name : find_type_constraint($type_or_name);
+
+    (defined $current)
+        || confess "Could not find the type constraint for '$type_or_name'";
+
+    while ( $current = $current->parent ) {
+        return $option_type_map{$current->name}
+            if exists $option_type_map{$current->name};
     }
-    else {
-        return;
-    }
+
+    return;
 }
 
 sub add_option_type_to_map {
-    my (undef, $type_or_name, $spec) = @_;
+    my (undef, $type_name, $option_string) = @_;
+    (defined $type_name && defined $option_string)
+        || confess "You must supply both a type name and an option string";
 
-    (defined $type_or_name and defined $spec)
-        or confess 'You must supply both a type name and an option string';
+    if ( blessed($type_name) ) {
+        $type_name = $type_name->name;
+    } else {
+        (find_type_constraint($type_name))
+            || confess "The type constraint '$type_name' does not exist";
+    }
 
-    $option_type_map{_to_name($type_or_name)} = $spec;
+    $option_type_map{$type_name} = $option_string;
 }
 
-1;
+no Mouse; no Mouse::Util::TypeConstraints; 1;
+
+__END__
+
+
+=pod
 
 =head1 NAME
 
 MouseX::Getopt::OptionTypeMap - Storage for the option to type mappings
 
+=head1 DESCRIPTION
+
+See the I<Custom Type Constraints> section in the L<MouseX::Getopt> docs
+for more info about how to use this module.
+
 =head1 METHODS
 
-=head2 has_option_type($name)
+These are all class methods and should be called as such.
 
-=head2 get_option_type($name)
+=over 4
 
-=head2 add_option_type_to_map($name, $spec)
+=item B<has_option_type ($type_or_name)>
 
-=head1 AUTHOR
+=item B<get_option_type ($type_or_name)>
 
-NAKAGAWA Masaki E<lt>masaki@cpan.orgE<gt>
+=item B<add_option_type_to_map ($type_name, $option_spec)>
 
-=head1 LICENSE
+=item B<meta>
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+=back
+
+=head1 SEE ALSO
+
+L<MouseX::Getopt>
 
 =cut

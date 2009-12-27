@@ -1,27 +1,31 @@
-use inc::Module::Install;
-name 'MouseX-Getopt';
+use strict;
+use warnings;
+use inc::Module::Install 0.91;
+
+if ($Module::Install::AUTHOR) {
+    require Module::Install::AuthorRequires;
+    require Module::Install::AuthorTests;
+    require Module::Install::Repository;
+}
+
 all_from 'lib/MouseX/Getopt.pm';
 
-requires 'Mouse' => '0.20';
-requires 'Mouse::Role';
-requires 'Mouse::Meta::Attribute';
-requires 'Mouse::Util::TypeConstraints';
-requires 'Getopt::Long';
-requires 'Class::Method::Modifiers';
-requires 'Scalar::Util' => '1.14';
-requires 'Carp';
+requires 'Mouse'        => '0.45';
+requires 'Getopt::Long' => '2.37';
 
-recommends 'Class::Method::Modifiers::Fast';
+# optional
+test_requires 'Getopt::Long::Descriptive' => '0.077';
 
-tests 't/*.t';
-test_requires 'Test::More';
-test_requires 'Test::UseAllModules';
-test_requires 'Test::Deep';
-test_requires 'Test::Exception';
-test_requires 'Path::Class';
-test_requires 'Any::Moose' => '0.07';
-author_tests 'xt';
-use_test_base;
+build_requires 'Test::Mouse';
+build_requires 'Test::More'       => '0.62';
+build_requires 'Test::Exception'  => '0.21';
 
-auto_include_deps;
-WriteAll;
+author_requires 'Test::Pod' => 1.14;
+author_requires 'Test::Pod::Coverage' => '1.04';
+author_tests('t/author');
+
+auto_set_repository();
+
+auto_manifest();
+
+WriteAll(check_nmake => 0);
